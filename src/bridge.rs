@@ -704,8 +704,8 @@ impl Bridge {
                     Ok(reqwest_eventsource::Event::Message(msg)) => {
                         log::debug!("message {:?}", msg.data);
                         match serde_json::from_str::<Vec<EventEnvelope>>(&msg.data) {
-                            Ok(mut event) => Some(HueEvent::Event {
-                                data: event.pop().unwrap().data,
+                            Ok(event) => Some(HueEvent::Event {
+                                data: event.into_iter().flat_map(|e| e.data).collect(),
                             }),
                             Err(e) => Some(HueEvent::Error(format!("{:?}", e))),
                         }
