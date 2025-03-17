@@ -1,9 +1,8 @@
 use crate::{HueError, HueError::DiscoveryError};
 use futures::executor::block_on;
-use futures_util::{pin_mut, stream::StreamExt};
-use mdns::{Record, RecordKind};
 use serde_json::{Map, Value};
-use std::{net::IpAddr, time::Duration};
+use std::{net::IpAddr};
+use simple_mdns::async_discovery::OneShotMdnsResolver;
 
 // As Per instrucitons at
 // https://developers.meethue.com/develop/application-design-guidance/hue-bridge-discovery/
@@ -66,9 +65,27 @@ const SERVICE_NAME: &str = "_hue._tcp.local";
 
 // Define a function that discovers a hue bridge using mDNS
 pub async fn discover_hue_bridge_m_dns() -> Result<IpAddr, HueError> {
-    // Iterate through responses from each hue bridge device, asking for new devices every 15s
-    let stream_disc = mdns::discover::all(SERVICE_NAME, Duration::from_secs(1));
-    let stream = match stream_disc {
+    let mdns_resolver = OneShotMdnsResolver::new().map_err(|e| DiscoveryError {
+        msg: e.to_string(),
+    })?;
+    let mdns_query = mdns_resolver.query_service_address(SERVICE_NAME).await;
+
+    match mdns_query {
+        Ok(Some(ip)) => {
+            Ok(ip)
+        }
+        Ok(None) => Err(DiscoveryError {
+            msg: "No response from bridge".into(),
+        }),
+        Err(e) => {
+            Err(DiscoveryError {
+                msg: e.to_string(),
+            })
+        }
+    }
+
+    // let stream_disc = mdns::discover::all(SERVICE_NAME, Duration::from_secs(1));
+    /*let stream = match stream_disc {
         Ok(s) => s.listen(),
         Err(_e) => {
             return Err(DiscoveryError {
@@ -97,17 +114,19 @@ pub async fn discover_hue_bridge_m_dns() -> Result<IpAddr, HueError> {
         Err(_e) => Err(DiscoveryError {
             msg: "No response from bridge".into(),
         }),
-    }
+    }*/
+
+
 }
 
 // Define a helper function that converts a record to an IP address
-fn to_ip_addr(record: &Record) -> Option<IpAddr> {
+/*fn to_ip_addr(record: &Record) -> Option<IpAddr> {
     match record.kind {
         RecordKind::A(addr) => Some(addr.into()),
         RecordKind::AAAA(addr) => Some(addr.into()),
         _ => None,
     }
-}
+}*/
 
 #[cfg(test)]
 mod tests {
