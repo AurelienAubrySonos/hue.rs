@@ -1,5 +1,4 @@
 use crate::{HueError, HueError::DiscoveryError};
-use futures::executor::block_on;
 use serde_json::{Map, Value};
 use std::{net::IpAddr};
 use simple_mdns::async_discovery::OneShotMdnsResolver;
@@ -7,8 +6,7 @@ use simple_mdns::async_discovery::OneShotMdnsResolver;
 // As Per instrucitons at
 // https://developers.meethue.com/develop/application-design-guidance/hue-bridge-discovery/
 pub async fn discover_hue_bridge() -> Result<IpAddr, HueError> {
-    let bridge_ftr = discover_hue_bridge_m_dns();
-    let bridge = block_on(bridge_ftr);
+    let bridge = discover_hue_bridge_m_dns().await;
     match bridge {
         Ok(bridge_ip) => {
             log::info!("discovered bridge at {bridge_ip} using mDNS");
