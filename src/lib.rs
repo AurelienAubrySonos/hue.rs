@@ -71,6 +71,8 @@ pub enum HueError {
         /// An error message describing the failure.
         msg: String,
     },
+    #[error("An error occured during mDNS discovery")]
+    MdnsError(#[source] std::io::Error)
 }
 
 impl HueError {

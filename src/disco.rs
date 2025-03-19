@@ -1,12 +1,17 @@
 use crate::{HueError, HueError::DiscoveryError};
+use mdns::discover_mdns_sd;
 use serde_json::{Map, Value};
-use std::{net::IpAddr};
-use simple_mdns::async_discovery::OneShotMdnsResolver;
+use std::net::IpAddr;
+
+mod mdns;
+
+// Define the service name for hue bridge
+const DNS_SD_HUE_SERVICE_NAME: &str = "_hue._tcp.local";
 
 // As Per instrucitons at
 // https://developers.meethue.com/develop/application-design-guidance/hue-bridge-discovery/
 pub async fn discover_hue_bridge() -> Result<IpAddr, HueError> {
-    let bridge = discover_hue_bridge_m_dns().await;
+    let bridge = discover_mdns_sd(DNS_SD_HUE_SERVICE_NAME).await;
     match bridge {
         Ok(bridge_ip) => {
             log::info!("discovered bridge at {bridge_ip} using mDNS");
@@ -57,74 +62,6 @@ pub async fn discover_hue_bridge_n_upnp() -> Result<IpAddr, HueError> {
         })?
         .parse()?)
 }
-
-// Define the service name for hue bridge
-const SERVICE_NAME: &str = "_hue._tcp.local";
-
-// Define a function that discovers a hue bridge using mDNS
-pub async fn discover_hue_bridge_m_dns() -> Result<IpAddr, HueError> {
-    let mdns_resolver = OneShotMdnsResolver::new().map_err(|e| DiscoveryError {
-        msg: e.to_string(),
-    })?;
-    let mdns_query = mdns_resolver.query_service_address(SERVICE_NAME).await;
-
-    match mdns_query {
-        Ok(Some(ip)) => {
-            Ok(ip)
-        }
-        Ok(None) => Err(DiscoveryError {
-            msg: "No response from bridge".into(),
-        }),
-        Err(e) => {
-            Err(DiscoveryError {
-                msg: e.to_string(),
-            })
-        }
-    }
-
-    // let stream_disc = mdns::discover::all(SERVICE_NAME, Duration::from_secs(1));
-    /*let stream = match stream_disc {
-        Ok(s) => s.listen(),
-        Err(_e) => {
-            return Err(DiscoveryError {
-                msg: _e.to_string(),
-            })
-        }
-    };
-    pin_mut!(stream);
-    let response = async_std::future::timeout(Duration::from_secs(5), stream.next()).await;
-    match response {
-        Ok(Some(Ok(response))) => {
-            // Get the first IP address from the response
-            let ip = response
-                .records()
-                .filter_map(to_ip_addr)
-                .next()
-                .ok_or(DiscoveryError {
-                    msg: "No IP address found in response".into(),
-                })?;
-            Ok(ip)
-        }
-        Ok(Some(Err(e))) => Err(DiscoveryError { msg: e.to_string() }),
-        Ok(None) => Err(DiscoveryError {
-            msg: "No response from bridge".into(),
-        }),
-        Err(_e) => Err(DiscoveryError {
-            msg: "No response from bridge".into(),
-        }),
-    }*/
-
-
-}
-
-// Define a helper function that converts a record to an IP address
-/*fn to_ip_addr(record: &Record) -> Option<IpAddr> {
-    match record.kind {
-        RecordKind::A(addr) => Some(addr.into()),
-        RecordKind::AAAA(addr) => Some(addr.into()),
-        _ => None,
-    }
-}*/
 
 #[cfg(test)]
 mod tests {
