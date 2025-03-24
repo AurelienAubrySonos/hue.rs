@@ -4,6 +4,7 @@ use reqwest::Method;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::time::Duration;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceIdentifier {
@@ -369,6 +370,7 @@ sFgDAiEA1Fj/C3AN5psFMjo0//mrQebo0eKd3aWRx+pQY08mk48=
             headers
         })
         .connection_verbose(true)
+        .tcp_keepalive(Some(Duration::from_secs(5)))
         .build()
         .unwrap()
 }
@@ -697,24 +699,24 @@ impl Bridge {
             Method::GET,
             format!("https://{}/eventstream/clip/v2", self.ip),
         );
-        Ok(
-            reqwest_eventsource::EventSource::new(request_builder)?.filter_map(|event| async {
-                log::debug!("event {:?}", event);
-                match event {
-                    Ok(reqwest_eventsource::Event::Message(msg)) => {
-                        log::debug!("message {:?}", msg.data);
-                        match serde_json::from_str::<Vec<EventEnvelope>>(&msg.data) {
-                            Ok(event) => Some(HueEvent::Event {
-                                data: event.into_iter().flat_map(|e| e.data).collect(),
-                            }),
-                            Err(e) => Some(HueEvent::Error(format!("{:?}", e))),
-                        }
+        let mut event_source = reqwest_eventsource::EventSource::new(request_builder)?;
+        event_source.set_retry_policy(Box::new(reqwest_eventsource::retry::Never)); // Do not retry to connect, if the TCP connection failed, there might be something going on
+        Ok(event_source.filter_map(|event| async {
+            log::debug!("event {:?}", event);
+            match event {
+                Ok(reqwest_eventsource::Event::Message(msg)) => {
+                    log::debug!("message {:?}", msg.data);
+                    match serde_json::from_str::<Vec<EventEnvelope>>(&msg.data) {
+                        Ok(event) => Some(HueEvent::Event {
+                            data: event.into_iter().flat_map(|e| e.data).collect(),
+                        }),
+                        Err(e) => Some(HueEvent::Error(format!("{:?}", e))),
                     }
-                    Ok(reqwest_eventsource::Event::Open) => None,
-                    Err(e) => Some(HueEvent::Error(format!("{:?}", e))),
                 }
-            }),
-        )
+                Ok(reqwest_eventsource::Event::Open) => None,
+                Err(e) => Some(HueEvent::Error(format!("{:?}", e))),
+            }
+        }))
     }
 }
 
