@@ -311,6 +311,7 @@ impl UnauthBridge {
             .json(&obtain)
             .send()
             .await?
+            .error_for_status()?
             .json()
             .await?;
         let resp = resp.get()?;
@@ -463,6 +464,7 @@ impl Bridge {
             .json(&obtain)
             .send()
             .await?
+            .error_for_status()?
             .json()
             .await?;
         let resp = resp.get()?;
@@ -489,7 +491,14 @@ impl Bridge {
     /// ```
     pub async fn get_all_devices(&self) -> crate::Result<Vec<Device>> {
         let url = format!("https://{}/clip/v2/resource/device", self.ip);
-        let resp: BridgeResponseV2<Device> = self.client.get(&url).send().await?.json().await?;
+        let resp: BridgeResponseV2<Device> = self
+            .client
+            .get(&url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
         let mut devices = resp.get()?;
         devices.sort_by(|a, b| a.id.cmp(&b.id));
         Ok(devices)
@@ -518,7 +527,14 @@ impl Bridge {
     /// ```
     pub async fn get_all_lights(&self) -> crate::Result<Vec<Light>> {
         let url = format!("https://{}/clip/v2/resource/light", self.ip);
-        let resp: BridgeResponseV2<Light> = self.client.get(&url).send().await?.json().await?;
+        let resp: BridgeResponseV2<Light> = self
+            .client
+            .get(&url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
         let mut lights = resp.get()?;
         lights.sort_by(|a, b| a.id.cmp(&b.id));
         Ok(lights)
@@ -548,7 +564,14 @@ impl Bridge {
     /// ```
     pub async fn get_all_rooms(&self) -> crate::Result<Vec<Room>> {
         let url = format!("https://{}/clip/v2/resource/room", self.ip);
-        let resp: BridgeResponseV2<Room> = self.client.get(&url).send().await?.json().await?;
+        let resp: BridgeResponseV2<Room> = self
+            .client
+            .get(&url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
         let mut groups = resp.get()?;
         groups.sort_by(|a, b| a.id.cmp(&b.id));
         Ok(groups)
@@ -597,7 +620,14 @@ impl Bridge {
     /// ```
     pub async fn get_all_zones(&self) -> crate::Result<Vec<Zone>> {
         let url = format!("https://{}/clip/v2/resource/zone", self.ip);
-        let resp: BridgeResponseV2<Zone> = self.client.get(&url).send().await?.json().await?;
+        let resp: BridgeResponseV2<Zone> = self
+            .client
+            .get(&url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
         let mut groups = resp.get()?;
         groups.sort_by(|a, b| a.id.cmp(&b.id));
         Ok(groups)
@@ -638,7 +668,14 @@ impl Bridge {
     /// ```
     pub async fn get_all_scenes(&self) -> crate::Result<Vec<Scene>> {
         let url = format!("https://{}/clip/v2/resource/scene", self.ip);
-        let resp: BridgeResponseV2<Scene> = self.client.get(&url).send().await?.json().await?;
+        let resp: BridgeResponseV2<Scene> = self
+            .client
+            .get(&url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
         let mut scenes = resp.get()?;
         scenes.sort_by(|a, b| a.id.cmp(&b.id));
         Ok(scenes)
@@ -656,6 +693,7 @@ impl Bridge {
             })
             .send()
             .await?
+            .error_for_status()?
             .json()
             .await?;
         resp.get()?;
@@ -674,6 +712,7 @@ impl Bridge {
             .json(command)
             .send()
             .await?
+            .error_for_status()?
             .json()
             .await?;
         resp.get()?;
@@ -688,6 +727,7 @@ impl Bridge {
             .json(&command)
             .send()
             .await?
+            .error_for_status()?
             .json()
             .await?;
         resp.get()?;
