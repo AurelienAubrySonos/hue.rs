@@ -6,6 +6,8 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::time::Duration;
 
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceIdentifier {
     pub rid: String,
@@ -309,6 +311,7 @@ impl UnauthBridge {
             .client
             .post(&url)
             .json(&obtain)
+            .timeout(REQUEST_TIMEOUT)
             .send()
             .await?
             .error_for_status()?
@@ -462,6 +465,7 @@ impl Bridge {
             .client
             .post(&url)
             .json(&obtain)
+            .timeout(REQUEST_TIMEOUT)
             .send()
             .await?
             .error_for_status()?
@@ -494,6 +498,7 @@ impl Bridge {
         let resp: BridgeResponseV2<Device> = self
             .client
             .get(&url)
+            .timeout(REQUEST_TIMEOUT)
             .send()
             .await?
             .error_for_status()?
@@ -530,6 +535,7 @@ impl Bridge {
         let resp: BridgeResponseV2<Light> = self
             .client
             .get(&url)
+            .timeout(REQUEST_TIMEOUT)
             .send()
             .await?
             .error_for_status()?
@@ -567,6 +573,7 @@ impl Bridge {
         let resp: BridgeResponseV2<Room> = self
             .client
             .get(&url)
+            .timeout(REQUEST_TIMEOUT)
             .send()
             .await?
             .error_for_status()?
@@ -623,6 +630,7 @@ impl Bridge {
         let resp: BridgeResponseV2<Zone> = self
             .client
             .get(&url)
+            .timeout(REQUEST_TIMEOUT)
             .send()
             .await?
             .error_for_status()?
@@ -671,6 +679,7 @@ impl Bridge {
         let resp: BridgeResponseV2<Scene> = self
             .client
             .get(&url)
+            .timeout(REQUEST_TIMEOUT)
             .send()
             .await?
             .error_for_status()?
@@ -691,6 +700,7 @@ impl Bridge {
                     action: "active".to_string(),
                 },
             })
+            .timeout(REQUEST_TIMEOUT)
             .send()
             .await?
             .error_for_status()?
@@ -710,6 +720,7 @@ impl Bridge {
             .client
             .put(&url)
             .json(command)
+            .timeout(REQUEST_TIMEOUT)
             .send()
             .await?
             .error_for_status()?
@@ -725,6 +736,7 @@ impl Bridge {
             .client
             .put(&url)
             .json(&command)
+            .timeout(REQUEST_TIMEOUT)
             .send()
             .await?
             .error_for_status()?
