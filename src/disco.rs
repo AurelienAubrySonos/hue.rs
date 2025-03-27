@@ -18,23 +18,10 @@ pub async fn discover_hue_bridge() -> Result<IpAddr, HueError> {
             Ok(bridge_ip)
         }
         Err(mdns_error) => {
-            log::debug!(
-                "Error in mDNS discovery: {}, falling back to n-upnp",
-                mdns_error
-            );
-            let n_upnp_result = discover_hue_bridge_n_upnp().await;
-            match n_upnp_result {
-                Ok(bridge_ip) => {
-                    log::info!("discovered bridge at {bridge_ip} using n-upnp");
-                    Ok(bridge_ip)
-                }
-                Err(nupnp_error) => {
-                    log::debug!("Failed to discover bridge using or n-upnp: {nupnp_error}");
-                    Err(DiscoveryError {
-                        msg: "Could not discover bridge".into(),
-                    })?
-                }
-            }
+            log::debug!("Error in mDNS discovery: {}", mdns_error);
+            Err(DiscoveryError {
+                msg: "Could not discover bridge".into(),
+            })?
         }
     }
 }
