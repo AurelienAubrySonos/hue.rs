@@ -36,10 +36,10 @@ impl Device {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LightMetadata {
-    pub name: String,
-    pub archetype: String,
+    pub name: Option<String>,
+    pub archetype: Option<String>,
     pub fixed_mired: Option<u16>,
-    pub function: String,
+    pub function: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -98,8 +98,8 @@ pub struct Light {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Metadata {
-    pub name: String,
-    pub archetype: String,
+    pub name: Option<String>,
+    pub archetype: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -249,13 +249,50 @@ pub struct EventColorTemperature {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Event {
-    pub id: String,
-    pub id_v1: Option<String>,
-    pub on: Option<On>,
-    pub dimming: Option<CommandLightDimming>,
-    pub color_temperature: Option<EventColorTemperature>,
-    pub color: Option<CommandLightColor>,
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum Event {
+    Device {
+        id: String,
+        id_v1: Option<String>,
+        metadata: Option<Metadata>,
+    },
+    GroupedLight {
+        id: String,
+        id_v1: Option<String>,
+        on: Option<On>,
+        dimming: Option<Dimming>,
+        color_temperature: Option<ColorTemperature>,
+        color: Option<Color>,
+    },
+    Light {
+        id: String,
+        id_v1: Option<String>,
+        metadata: Option<LightMetadata>,
+        service_id: Option<u32>,
+        on: Option<On>,
+        dimming: Option<Dimming>,
+        color_temperature: Option<ColorTemperature>,
+        color: Option<Color>,
+    },
+    Room {
+        id: String,
+        id_v1: Option<String>,
+        metadata: Option<Metadata>,
+        children: Option<Vec<ResourceIdentifier>>,
+        services: Option<Vec<ResourceIdentifier>>,
+    },
+    Scene {
+        id: String,
+        id_v1: Option<String>,
+        metadata: Option<SceneMetadata>,
+    },
+    Zone {
+        id: String,
+        id_v1: Option<String>,
+        metadata: Option<Metadata>,
+        children: Option<Vec<ResourceIdentifier>>,
+        services: Option<Vec<ResourceIdentifier>>,
+    },
 }
 
 /// An unauthenticated bridge is a bridge that has not

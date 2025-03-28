@@ -20,7 +20,7 @@ async fn main() {
             println!("id                                   name                 on    bri   hue sat temp  x      y");
             for l in lights.iter() {
                 println!(
-                    "{} {:20} {:5} {:3} {:5} {:3} {:4}K {:4} {:4}",
+                    "{} {:?} {:5} {:3} {:5} {:3} {:4}K {:4} {:4}",
                     l.id,
                     l.metadata.name,
                     if l.on.on { "on" } else { "off" },

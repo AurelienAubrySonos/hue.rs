@@ -21,7 +21,7 @@ async fn main() {
             println!("id                                   name                 on");
             for r in rooms.iter() {
                 println!(
-                    "{:2} {:20} {:5}",
+                    "{:2} {:?} {:5}",
                     r.id,
                     r.metadata.name,
                     if r.children.iter().all(|l| l.on.on) {
@@ -49,7 +49,7 @@ async fn main() {
             println!("id                                   name                 on");
             for r in rooms.iter() {
                 println!(
-                    "{:2} {:20} {:5}",
+                    "{:2} {:?} {:5}",
                     r.id,
                     r.metadata.name,
                     if r.children.iter().all(|l| l.on.on) {
