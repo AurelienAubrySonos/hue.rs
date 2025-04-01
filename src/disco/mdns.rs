@@ -42,33 +42,54 @@ pub async fn discover_mdns_sd(service_name: &str) -> Result<IpAddr, HueError> {
     let deadline = Instant::now() + Duration::from_secs(3);
     // This loop breaks when timeout_at returns an error
     loop {
-        let (n_bytes, origin_addr) = timeout_at(deadline, socket.recv_from(&mut dns_response_bytes_buffer))
-            .await
-            .map_err(|_elapsed_error| {
-                HueError::MdnsError(std::io::Error::new(
-                    std::io::ErrorKind::TimedOut,
-                    "mDNS response was not received on time",
-                ))
-            })?
-            .map_err(HueError::MdnsError)?;
+        let (n_bytes, _origin_addr) =
+            timeout_at(deadline, socket.recv_from(&mut dns_response_bytes_buffer))
+                .await
+                .map_err(|_elapsed_error| {
+                    HueError::MdnsError(std::io::Error::new(
+                        std::io::ErrorKind::TimedOut,
+                        "mDNS response was not received on time",
+                    ))
+                })?
+                .map_err(HueError::MdnsError)?;
 
-        let src_ip = origin_addr.ip();
         let dns_response_bytes = &dns_response_bytes_buffer[0..n_bytes];
-        if validate_response(dns_response_bytes, service_name, dns_query_id) {
-            return Ok(src_ip);
+        if let Some(service_ip) = validate_response(dns_response_bytes, service_name, dns_query_id)
+        {
+            return Ok(service_ip);
         }
     }
 }
 
 /// Validates the response to make sure it matches the request
-fn validate_response(dns_response_bytes: &[u8], service_name: &str, dns_query_id: u16) -> bool {
-    fn validate_response_inner(dns_response_bytes: &[u8], service_name: &str, dns_query_id: u16) -> Option<bool> {
-        let packet = dns_parser::Packet::parse(dns_response_bytes).ok()?;
-        let first_question = packet.questions.first()?;
-        Some(
-            first_question.qtype == dns_parser::QueryType::PTR
-                && first_question.qname.to_string() == service_name && packet.header.id == dns_query_id,
-        )
+fn validate_response(
+    dns_response_bytes: &[u8],
+    service_name: &str,
+    dns_query_id: u16,
+) -> Option<IpAddr> {
+    let packet = dns_parser::Packet::parse(dns_response_bytes).ok()?;
+
+    let has_right_answer = packet.answers.iter().any(|answer| {
+        // Check that the answer is indeed a PTR
+        let is_ptr_record = matches!(answer.data, dns_parser::RData::PTR(_));
+        // Check that the answer name is indeed the service name we requested
+        let is_corresponding_answer_from_request = answer.name.to_string() == service_name;
+        is_ptr_record && is_corresponding_answer_from_request
+    });
+
+    let is_related_response = packet.header.id == dns_query_id && has_right_answer;
+    if !is_related_response {
+        return None;
     }
-    validate_response_inner(dns_response_bytes, service_name, dns_query_id).unwrap_or(false)
+
+    // Get the right IP from the additional section records per DNS-SD RFC 6763 (12.1)
+    let first_a_record_ip = packet.additional.iter().find_map(|resource_record| {
+        if let dns_parser::RData::A(ip_addr_v4) = resource_record.data {
+            Some(IpAddr::V4(ip_addr_v4.0))
+        } else {
+            None
+        }
+    });
+
+    first_a_record_ip
 }
