@@ -22,8 +22,14 @@ async fn main() {
                 println!(
                     "{} {:?} {:5} {:3} {:5} {:3} {:4}K {:4} {:4}",
                     l.id,
-                    l.metadata.name,
-                    if l.on.on { "on" } else { "off" },
+                    l.metadata
+                        .as_ref()
+                        .and_then(|metadata| metadata.name.clone()),
+                    if l.on.as_ref().map(|on| on.on).unwrap_or(false) {
+                        "on"
+                    } else {
+                        "off"
+                    },
                     l.dimming.as_ref().map(|d| d.brightness).unwrap_or(0.0),
                     0, // hue
                     0, // sat
@@ -39,8 +45,14 @@ async fn main() {
                             0
                         })
                         .unwrap_or(0),
-                    l.color.as_ref().map(|color| color.xy.x).unwrap_or(0.0),
-                    l.color.as_ref().map(|color| color.xy.y).unwrap_or(0.0),
+                    l.color
+                        .as_ref()
+                        .and_then(|color| color.xy.as_ref().map(|xy| xy.x))
+                        .unwrap_or(0.0),
+                    l.color
+                        .as_ref()
+                        .and_then(|color| color.xy.as_ref().map(|xy| xy.y))
+                        .unwrap_or(0.0),
                 );
             }
         }

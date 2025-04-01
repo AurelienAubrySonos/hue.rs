@@ -19,7 +19,11 @@ async fn main() {
         Ok(scenes) => {
             println!("id                                   name");
             for l in scenes.iter() {
-                println!("{:2} {:40}", l.id, l.metadata.name,);
+                println!(
+                    "{:2} {:?}",
+                    l.id,
+                    l.metadata.as_ref().map(|metadata| metadata.name.clone())
+                );
             }
         }
         Err(err) => {

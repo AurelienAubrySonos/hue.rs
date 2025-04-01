@@ -72,7 +72,7 @@ pub enum HueError {
         msg: String,
     },
     #[error("An error occured during mDNS discovery")]
-    MdnsError(#[source] std::io::Error)
+    MdnsError(#[source] std::io::Error),
 }
 
 impl HueError {
@@ -89,6 +89,7 @@ pub type Result<T> = std::result::Result<T, HueError>;
 mod bridge;
 mod command_parser;
 mod disco;
+pub mod resource;
 
 pub use bridge::*;
 pub use command_parser::*;

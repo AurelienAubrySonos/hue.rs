@@ -23,10 +23,20 @@ async fn main() {
                 println!(
                     "{:2} {:?} {:5}",
                     r.id,
-                    r.metadata.name,
-                    if r.children.iter().all(|l| l.on.on) {
+                    r.metadata
+                        .as_ref()
+                        .and_then(|metadata| metadata.name.clone()),
+                    if r.children
+                        .iter()
+                        .all(|l| l.on.as_ref().map(|on| on.on).unwrap_or(false))
+                    {
                         "all on"
-                    } else if r.children.iter().any(|l| l.on.on) {
+                    } else if r.children.iter().any(|l| l
+                        .on
+                        .as_ref()
+                        .map(|on| on.on)
+                        .unwrap_or(false))
+                    {
                         "some on"
                     } else {
                         "all off"
@@ -51,10 +61,18 @@ async fn main() {
                 println!(
                     "{:2} {:?} {:5}",
                     r.id,
-                    r.metadata.name,
-                    if r.children.iter().all(|l| l.on.on) {
+                    r.metadata.as_ref().and_then(|m| m.name.clone()),
+                    if r.children
+                        .iter()
+                        .all(|l| l.on.as_ref().map(|on| on.on).unwrap_or(false))
+                    {
                         "all on"
-                    } else if r.children.iter().any(|l| l.on.on) {
+                    } else if r.children.iter().any(|l| l
+                        .on
+                        .as_ref()
+                        .map(|on| on.on)
+                        .unwrap_or(false))
+                    {
                         "some on"
                     } else {
                         "all off"

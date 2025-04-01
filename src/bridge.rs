@@ -1,3 +1,7 @@
+use crate::resource::{
+    BridgeHome, Device, GroupedLight, Light, Metadata, On, ResourceIdentifier, Room, Scene, Zone,
+    XY,
+};
 use futures::Stream;
 use futures::StreamExt;
 use reqwest::Method;
@@ -8,124 +12,27 @@ use std::time::Duration;
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResourceIdentifier {
-    pub rid: String,
-    pub rtype: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Device {
-    pub id: String,
-    pub id_v1: Option<String>,
-    pub services: Vec<ResourceIdentifier>,
-}
-
 impl Device {
     /// Returns the ids of all services of type light associated with this device.
-    pub fn get_lights(&self) -> impl Iterator<Item = &str> {
-        self.services.iter().filter_map(|service| {
-            if service.rtype == "light" {
-                Some(service.rid.as_str())
-            } else {
-                None
-            }
+    pub fn get_lights(&self) -> Option<impl Iterator<Item = &str>> {
+        self.services.as_ref().map(|services| {
+            services.iter().filter_map(|service| {
+                if service.rtype == "light" {
+                    Some(service.rid.as_str())
+                } else {
+                    None
+                }
+            })
         })
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LightMetadata {
-    pub name: Option<String>,
-    pub archetype: Option<String>,
-    pub fixed_mired: Option<u16>,
-    pub function: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct On {
-    pub on: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Dimming {
-    pub brightness: f32,
-    pub min_dim_level: Option<f32>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MirekSchema {
-    pub mirek_minimum: u16,
-    pub mirek_maximum: u16,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ColorTemperature {
-    pub mirek: Option<u16>,
-    pub mirek_valid: bool,
-    pub mirek_schema: MirekSchema,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct XY {
-    pub x: f32,
-    pub y: f32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Gamut {
-    pub red: XY,
-    pub green: XY,
-    pub blue: XY,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Color {
-    pub xy: XY,
-    pub gamut: Option<Gamut>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Light {
-    pub id: String,
-    pub id_v1: Option<String>,
-    pub metadata: LightMetadata,
-    pub service_id: u32,
-    pub on: On,
-    pub dimming: Option<Dimming>,
-    pub color_temperature: Option<ColorTemperature>,
-    pub color: Option<Color>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Metadata {
-    pub name: Option<String>,
-    pub archetype: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Room {
-    pub id: String,
-    pub id_v1: Option<String>,
-    pub metadata: Metadata,
-    pub children: Vec<ResourceIdentifier>,
-    pub services: Vec<ResourceIdentifier>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResolvedRoom {
     pub id: String,
     pub id_v1: Option<String>,
-    pub metadata: Metadata,
+    pub metadata: Option<Metadata>,
     pub children: Vec<Light>,
-    pub services: Vec<ResourceIdentifier>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Zone {
-    pub id: String,
-    pub id_v1: Option<String>,
-    pub metadata: Metadata,
-    pub children: Vec<ResourceIdentifier>,
     pub services: Vec<ResourceIdentifier>,
 }
 
@@ -133,21 +40,9 @@ pub struct Zone {
 pub struct ResolvedZone {
     pub id: String,
     pub id_v1: Option<String>,
-    pub metadata: Metadata,
+    pub metadata: Option<Metadata>,
     pub children: Vec<Light>,
     pub services: Vec<ResourceIdentifier>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SceneMetadata {
-    pub name: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Scene {
-    pub id: String,
-    pub id_v1: Option<String>,
-    pub metadata: SceneMetadata,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -250,49 +145,16 @@ pub struct EventColorTemperature {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
-pub enum Event {
-    Device {
-        id: String,
-        id_v1: Option<String>,
-        metadata: Option<Metadata>,
-    },
-    GroupedLight {
-        id: String,
-        id_v1: Option<String>,
-        on: Option<On>,
-        dimming: Option<Dimming>,
-        color_temperature: Option<ColorTemperature>,
-        color: Option<Color>,
-    },
-    Light {
-        id: String,
-        id_v1: Option<String>,
-        metadata: Option<LightMetadata>,
-        service_id: Option<u32>,
-        on: Option<On>,
-        dimming: Option<Dimming>,
-        color_temperature: Option<ColorTemperature>,
-        color: Option<Color>,
-    },
-    Room {
-        id: String,
-        id_v1: Option<String>,
-        metadata: Option<Metadata>,
-        children: Option<Vec<ResourceIdentifier>>,
-        services: Option<Vec<ResourceIdentifier>>,
-    },
-    Scene {
-        id: String,
-        id_v1: Option<String>,
-        metadata: Option<SceneMetadata>,
-    },
-    Zone {
-        id: String,
-        id_v1: Option<String>,
-        metadata: Option<Metadata>,
-        children: Option<Vec<ResourceIdentifier>>,
-        services: Option<Vec<ResourceIdentifier>>,
-    },
+pub enum EventData {
+    BridgeHome(BridgeHome),
+    Device(Device),
+    GroupedLight(GroupedLight),
+    Light(Light),
+    Room(Room),
+    Scene(Scene),
+    Zone(Zone),
+    #[serde(other)]
+    Unknown,
 }
 
 /// An unauthenticated bridge is a bridge that has not
@@ -633,19 +495,27 @@ impl Bridge {
                 metadata: room.metadata,
                 children: room
                     .children
-                    .into_iter()
-                    .flat_map(|child| {
-                        indexed_devices.get(&child.rid).map_or(vec![], |device| {
-                            device
-                                .get_lights()
-                                .filter_map(|light_id| indexed_lights.get(light_id).cloned())
-                                .collect()
-                        })
+                    .map(|children| {
+                        children
+                            .into_iter()
+                            .flat_map(|child| {
+                                indexed_devices.get(&child.rid).map_or(vec![], |device| {
+                                    device
+                                        .get_lights()
+                                        .into_iter()
+                                        .flatten()
+                                        .filter_map(|light_id| {
+                                            indexed_lights.get(light_id).cloned()
+                                        })
+                                        .collect()
+                                })
+                            })
+                            .collect()
                     })
-                    .collect(),
+                    .unwrap_or_default(),
                 id_v1: room.id_v1,
                 id: room.id,
-                services: room.services,
+                services: room.services.unwrap_or_default(),
             })
             .collect())
     }
@@ -689,12 +559,16 @@ impl Bridge {
                 metadata: zone.metadata,
                 children: zone
                     .children
-                    .into_iter()
-                    .filter_map(|child| indexed_lights.get(&child.rid).cloned())
-                    .collect(),
+                    .map(|children| {
+                        children
+                            .into_iter()
+                            .filter_map(|child| indexed_lights.get(&child.rid).cloned())
+                            .collect()
+                    })
+                    .unwrap_or_default(),
                 id_v1: zone.id_v1,
                 id: zone.id,
-                services: zone.services,
+                services: zone.services.unwrap_or_default(),
             })
             .collect())
     }
@@ -795,10 +669,8 @@ impl Bridge {
             match event {
                 Ok(reqwest_eventsource::Event::Message(msg)) => {
                     log::debug!("message {:?}", msg.data);
-                    match serde_json::from_str::<Vec<EventEnvelope>>(&msg.data) {
-                        Ok(event) => Some(HueEvent::Event {
-                            data: event.into_iter().flat_map(|e| e.data).collect(),
-                        }),
+                    match serde_json::from_str::<Vec<Event>>(&msg.data) {
+                        Ok(event) => Some(HueEvent::Events(event)),
                         Err(e) => Some(HueEvent::Error(format!("{:?}", e))),
                     }
                 }
@@ -810,13 +682,24 @@ impl Bridge {
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]
-struct EventEnvelope {
-    data: Vec<Event>,
+pub struct Event {
+    pub data: Vec<EventData>,
+    pub r#type: EventType,
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum EventType {
+    Update,
+    Add,
+    Delete,
+    Error,
+    Unknown,
 }
 
 #[derive(Debug, Clone)]
 pub enum HueEvent {
-    Event { data: Vec<Event> },
+    Events(Vec<Event>),
     Error(String),
 }
 
