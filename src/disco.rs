@@ -8,7 +8,7 @@ mod mdns;
 // Define the service name for hue bridge
 const DNS_SD_HUE_SERVICE_NAME: &str = "_hue._tcp.local";
 
-// As Per instrucitons at
+// As Per instructions at
 // https://developers.meethue.com/develop/application-design-guidance/hue-bridge-discovery/
 pub async fn discover_hue_bridge() -> Result<IpAddr, HueError> {
     let bridge = discover_mdns_sd(DNS_SD_HUE_SERVICE_NAME).await;
@@ -61,6 +61,10 @@ pub async fn discover_hue_bridge_n_upnp() -> Result<IpAddr, HueError> {
             msg: "expect a string in internalipaddress".into(),
         })?
         .parse()?)
+}
+
+pub async fn discover_hue_bridge_mdns() -> Result<IpAddr, HueError> {
+    discover_mdns_sd(DNS_SD_HUE_SERVICE_NAME).await
 }
 
 #[cfg(test)]

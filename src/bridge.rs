@@ -294,12 +294,30 @@ impl Bridge {
 
     /// Scans the current network for Bridges, and if there is at least one, returns the first one
     /// that was found.
+    /// This function uses mDNS, and falls back to nUPnP if no bridge was found.
     /// ### Example
     /// ```no_run
     /// let maybe_bridge = hueclient::Bridge::discover();
     /// ```
     pub async fn discover() -> Option<UnauthBridge> {
         crate::disco::discover_hue_bridge()
+            .await
+            .ok()
+            .map(|ip| UnauthBridge {
+                ip,
+                client: create_reqwest_client(None),
+            })
+    }
+
+    /// Scans the current network for Bridges, and if there is at least one, returns the first one
+    /// that was found.
+    /// This function only uses mDNS for discovery, and not the nUPnP method.
+    /// ### Example
+    /// ```no_run
+    /// let maybe_bridge = hueclient::Bridge::discover_mdns();
+    /// ```
+    pub async fn discover_mdns() -> Option<UnauthBridge> {
+        crate::disco::discover_hue_bridge_mdns()
             .await
             .ok()
             .map(|ip| UnauthBridge {
