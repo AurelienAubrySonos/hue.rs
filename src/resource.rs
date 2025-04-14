@@ -78,7 +78,7 @@ pub struct SceneMetadata {
     pub name: Option<String>,
 }
 
-type Group = ResourceIdentifier;
+pub type Group = ResourceIdentifier;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SceneStatus {
@@ -86,7 +86,7 @@ pub struct SceneStatus {
     pub last_recall: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum SceneStatusActive {
     Inactive,
@@ -101,6 +101,22 @@ pub struct Scene {
     pub metadata: Option<SceneMetadata>,
     pub group: Option<Group>,
     pub status: Option<SceneStatus>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum SmartSceneActive {
+    Active,
+    Inactive,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SmartScene {
+    pub id: String,
+    pub id_v1: Option<String>,
+    pub metadata: Option<SceneMetadata>,
+    pub group: Option<Group>,
+    pub state: Option<SmartSceneActive>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

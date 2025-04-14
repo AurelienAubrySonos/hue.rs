@@ -1,6 +1,6 @@
 use crate::resource::{
-    BridgeHome, Device, GroupedLight, Light, Metadata, On, ResourceIdentifier, Room, Scene, Zone,
-    XY,
+    BridgeHome, Device, GroupedLight, Light, Metadata, On, ResourceIdentifier, Room, Scene,
+    SmartScene, Zone, XY,
 };
 use futures::Stream;
 use futures::StreamExt;
@@ -152,6 +152,7 @@ pub enum EventData {
     Light(Light),
     Room(Room),
     Scene(Scene),
+    SmartScene(SmartScene),
     Zone(Zone),
     #[serde(other)]
     Unknown,
@@ -627,6 +628,55 @@ impl Bridge {
             .json(&CommandScene {
                 recall: SceneRecall {
                     action: "active".to_string(),
+                },
+            })
+            .timeout(REQUEST_TIMEOUT)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        resp.get()?;
+
+        Ok(())
+    }
+
+    /// Returns a vector of all smart scenes that are registered at this `Bridge`, sorted by their id's.
+    /// This function returns an error if `bridge.username` is `None`.
+    /// ### Example
+    /// ```no_run
+    /// # tokio_test::block_on(async {
+    /// let bridge = hueclient::Bridge::for_ip([192u8, 168, 0, 4])
+    ///    .with_user("rVV05G0i52vQMMLn6BK3dpr0F3uDiqtDjPLPK2uj");
+    /// for scene in &bridge.get_all_smart_scenes().await.unwrap() {
+    ///     println!("{:?}", scene);
+    /// }
+    /// # })
+    /// ```
+    pub async fn get_all_smart_scenes(&self) -> crate::Result<Vec<SmartScene>> {
+        let url = format!("https://{}/clip/v2/resource/smart_scene", self.ip);
+        let resp: BridgeResponseV2<SmartScene> = self
+            .client
+            .get(&url)
+            .timeout(REQUEST_TIMEOUT)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        let mut smart_scenes = resp.get()?;
+        smart_scenes.sort_by(|a, b| a.id.cmp(&b.id));
+        Ok(smart_scenes)
+    }
+
+    pub async fn set_smart_scene(&self, scene: String) -> crate::Result<()> {
+        let url = format!("https://{}/clip/v2/resource/smart_scene/{}", self.ip, scene);
+        let resp: BridgeResponseV2<Value> = self
+            .client
+            .put(&url)
+            .json(&CommandScene {
+                recall: SceneRecall {
+                    action: "activate".to_string(),
                 },
             })
             .timeout(REQUEST_TIMEOUT)
