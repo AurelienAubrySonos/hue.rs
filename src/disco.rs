@@ -8,14 +8,23 @@ mod mdns;
 // Define the service name for hue bridge
 const DNS_SD_HUE_SERVICE_NAME: &str = "_hue._tcp.local";
 
+pub(crate) struct BridgeInfo {
+    pub(crate) ip: IpAddr,
+    pub(crate) id: String,
+}
+
 // As Per instructions at
 // https://developers.meethue.com/develop/application-design-guidance/hue-bridge-discovery/
-pub async fn discover_hue_bridge() -> Result<IpAddr, HueError> {
+pub async fn discover_hue_bridge() -> Result<BridgeInfo, HueError> {
     let bridge = discover_mdns_sd(DNS_SD_HUE_SERVICE_NAME).await;
     match bridge {
-        Ok(bridge_ip) => {
-            log::info!("discovered bridge at {bridge_ip} using mDNS");
-            Ok(bridge_ip)
+        Ok(bridge_info) => {
+            log::info!(
+                "Discovered bridge using mDNS. IP: {}, ID: {}",
+                bridge_info.ip,
+                bridge_info.id
+            );
+            Ok(bridge_info)
         }
         Err(mdns_error) => {
             log::debug!(
@@ -24,9 +33,13 @@ pub async fn discover_hue_bridge() -> Result<IpAddr, HueError> {
             );
             let n_upnp_result = discover_hue_bridge_n_upnp().await;
             match n_upnp_result {
-                Ok(bridge_ip) => {
-                    log::info!("discovered bridge at {bridge_ip} using n-upnp");
-                    Ok(bridge_ip)
+                Ok(bridge_info) => {
+                    log::info!(
+                        "Discovered bridge using n-upnp. IP: {}, ID: {}",
+                        bridge_info.ip,
+                        bridge_info.id
+                    );
+                    Ok(bridge_info)
                 }
                 Err(nupnp_error) => {
                     log::debug!("Failed to discover bridge using or n-upnp: {nupnp_error}");
@@ -39,7 +52,7 @@ pub async fn discover_hue_bridge() -> Result<IpAddr, HueError> {
     }
 }
 
-pub async fn discover_hue_bridge_n_upnp() -> Result<IpAddr, HueError> {
+pub async fn discover_hue_bridge_n_upnp() -> Result<BridgeInfo, HueError> {
     let objects: Vec<Map<String, Value>> = reqwest::get("https://discovery.meethue.com/")
         .await?
         .json()
@@ -55,15 +68,29 @@ pub async fn discover_hue_bridge_n_upnp() -> Result<IpAddr, HueError> {
     let ip = object.get("internalipaddress").ok_or(DiscoveryError {
         msg: "Expected internalipaddress".into(),
     })?;
-    Ok(ip
+
+    let ip = ip
         .as_str()
         .ok_or(DiscoveryError {
             msg: "expect a string in internalipaddress".into(),
         })?
-        .parse()?)
+        .parse()?;
+
+    let id = object
+        .get("id")
+        .ok_or(DiscoveryError {
+            msg: "Expected id".into(),
+        })?
+        .as_str()
+        .ok_or(DiscoveryError {
+            msg: "expect a string in id".into(),
+        })?
+        .to_string();
+
+    Ok(BridgeInfo { ip, id })
 }
 
-pub async fn discover_hue_bridge_mdns() -> Result<IpAddr, HueError> {
+pub async fn discover_hue_bridge_mdns() -> Result<BridgeInfo, HueError> {
     discover_mdns_sd(DNS_SD_HUE_SERVICE_NAME).await
 }
 

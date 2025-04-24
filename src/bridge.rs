@@ -163,6 +163,8 @@ pub enum EventData {
 pub struct UnauthBridge {
     /// The IP-address of the bridge.
     pub ip: std::net::IpAddr,
+    /// The ID of the bridge.
+    pub id: String,
     client: reqwest::Client,
 }
 
@@ -289,6 +291,7 @@ impl Bridge {
     pub fn for_ip(ip: impl Into<std::net::IpAddr>) -> UnauthBridge {
         UnauthBridge {
             ip: ip.into(),
+            id: String::default(),
             client: create_reqwest_client(None),
         }
     }
@@ -304,8 +307,9 @@ impl Bridge {
         crate::disco::discover_hue_bridge()
             .await
             .ok()
-            .map(|ip| UnauthBridge {
-                ip,
+            .map(|bridge_info| UnauthBridge {
+                ip: bridge_info.ip,
+                id: bridge_info.id,
                 client: create_reqwest_client(None),
             })
     }
@@ -321,8 +325,9 @@ impl Bridge {
         crate::disco::discover_hue_bridge_mdns()
             .await
             .ok()
-            .map(|ip| UnauthBridge {
-                ip,
+            .map(|bridge_info| UnauthBridge {
+                ip: bridge_info.ip,
+                id: bridge_info.id,
                 client: create_reqwest_client(None),
             })
     }

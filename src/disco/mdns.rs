@@ -1,4 +1,6 @@
+use crate::disco::BridgeInfo;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4};
+use std::str::from_utf8;
 use std::time::Duration;
 use tokio::net::UdpSocket;
 use tokio::time::{timeout_at, Instant};
@@ -9,7 +11,7 @@ use crate::HueError;
 ///
 /// This function is a full reimplementation of mDNS because I haven't found a simple mDNS crate
 /// that doesn't involve a daemon of some sort
-pub async fn discover_mdns_sd(service_name: &str) -> Result<IpAddr, HueError> {
+pub async fn discover_mdns_sd(service_name: &str) -> Result<BridgeInfo, HueError> {
     // Note: this only binds on a single interface. If the device has multiple interfaces,
     // this won't perform the discovery on all interface
     let socket = UdpSocket::bind(SocketAddr::V4(SocketAddrV4::new(
@@ -66,13 +68,13 @@ fn validate_response(
     dns_response_bytes: &[u8],
     service_name: &str,
     dns_query_id: u16,
-) -> Option<IpAddr> {
+) -> Option<BridgeInfo> {
     let packet = dns_parser::Packet::parse(dns_response_bytes).ok()?;
 
     let has_right_answer = packet.answers.iter().any(|answer| {
         // Check that the answer is indeed a PTR
         let is_ptr_record = matches!(answer.data, dns_parser::RData::PTR(_));
-        // Check that the answer name is indeed the service name we requested
+        // Check that the answer name is indeed the service name we requested<
         let is_corresponding_answer_from_request = answer.name.to_string() == service_name;
         is_ptr_record && is_corresponding_answer_from_request
     });
@@ -83,13 +85,26 @@ fn validate_response(
     }
 
     // Get the right IP from the additional section records per DNS-SD RFC 6763 (12.1)
-    let first_a_record_ip = packet.additional.iter().find_map(|resource_record| {
-        if let dns_parser::RData::A(ip_addr_v4) = resource_record.data {
-            Some(IpAddr::V4(ip_addr_v4.0))
-        } else {
-            None
+    let mut ip_addr: Option<IpAddr> = None;
+    let mut bridge_id: Option<String> = None;
+    for additional_record in packet.additional.iter() {
+        if let dns_parser::RData::A(ip_addr_v4) = &additional_record.data {
+            ip_addr = Some(IpAddr::V4(ip_addr_v4.0));
+        } else if let dns_parser::RData::TXT(text) = &additional_record.data {
+            bridge_id = text
+                .iter()
+                .map(|x| from_utf8(x).unwrap())
+                .find(|x| x.starts_with("bridgeid="))
+                .map(|x| x.strip_prefix("bridgeid=").unwrap().to_string());
         }
-    });
+    }
 
-    first_a_record_ip
+    if let (Some(ip_addr), Some(bridge_id)) = (ip_addr, bridge_id) {
+        Some(BridgeInfo {
+            id: bridge_id,
+            ip: ip_addr,
+        })
+    } else {
+        None
+    }
 }
