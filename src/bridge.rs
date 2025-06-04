@@ -303,15 +303,17 @@ impl Bridge {
     /// ```no_run
     /// let maybe_bridge = hueclient::Bridge::discover();
     /// ```
-    pub async fn discover() -> Option<UnauthBridge> {
+    pub async fn discover() -> Vec<UnauthBridge> {
         crate::disco::discover_hue_bridge()
             .await
-            .ok()
+            .unwrap_or_default()
+            .into_iter()
             .map(|bridge_info| UnauthBridge {
                 ip: bridge_info.ip,
                 id: bridge_info.id,
                 client: create_reqwest_client(None),
             })
+            .collect()
     }
 
     /// Scans the current network for Bridges, and if there is at least one, returns the first one
@@ -321,26 +323,17 @@ impl Bridge {
     /// ```no_run
     /// let maybe_bridge = hueclient::Bridge::discover_mdns();
     /// ```
-    pub async fn discover_mdns() -> Option<UnauthBridge> {
+    pub async fn discover_mdns() -> Vec<UnauthBridge> {
         crate::disco::discover_hue_bridge_mdns()
             .await
-            .ok()
+            .unwrap_or_default()
+            .into_iter()
             .map(|bridge_info| UnauthBridge {
                 ip: bridge_info.ip,
                 id: bridge_info.id,
                 client: create_reqwest_client(None),
             })
-    }
-
-    /// A convience wrapper around `Bridge::disover`, but panics if there is no bridge present.
-    /// ### Example
-    /// ```no_run
-    /// let brige = hueclient::Bridge::discover_required();
-    /// ```
-    /// ### Panics
-    /// This function panics if there is no brige present.
-    pub async fn discover_required() -> UnauthBridge {
-        Self::discover().await.expect("No bridge found!")
+            .collect()
     }
 
     /// Consumes the bidge and return a new one with a configured username.

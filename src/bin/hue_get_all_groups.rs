@@ -12,8 +12,11 @@ async fn main() {
         println!("usage : {:?} <username>", args[0]);
         return;
     }
-    let bridge = hueclient::Bridge::discover_required()
+    let bridge = hueclient::Bridge::discover()
         .await
+        .into_iter()
+        .next()
+        .unwrap()
         .with_user(args[1].to_string());
     println!("Rooms");
     match bridge.resolve_all_rooms().await {

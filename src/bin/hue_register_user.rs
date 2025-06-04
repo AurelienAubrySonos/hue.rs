@@ -13,7 +13,11 @@ async fn main() {
     if args.len() != 2 {
         println!("usage : {:?} <devicetype>", args[0]);
     } else {
-        let bridge = hueclient::Bridge::discover_required().await;
+        let bridge = hueclient::Bridge::discover()
+            .await
+            .into_iter()
+            .next()
+            .unwrap();
         println!("posting user {:?} in {:?}", args[1], bridge);
         loop {
             let r = bridge.clone().register_application(&args[1]).await;

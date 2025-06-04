@@ -1,4 +1,5 @@
 use crate::disco::BridgeInfo;
+use log::info;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::str::from_utf8;
 use std::time::Duration;
@@ -11,7 +12,7 @@ use crate::HueError;
 ///
 /// This function is a full reimplementation of mDNS because I haven't found a simple mDNS crate
 /// that doesn't involve a daemon of some sort
-pub async fn discover_mdns_sd(service_name: &str) -> Result<BridgeInfo, HueError> {
+pub async fn discover_mdns_sd(service_name: &str) -> Result<Vec<BridgeInfo>, HueError> {
     // Note: this only binds on a single interface. If the device has multiple interfaces,
     // this won't perform the discovery on all interface
     let socket = UdpSocket::bind(SocketAddr::V4(SocketAddrV4::new(
@@ -42,24 +43,34 @@ pub async fn discover_mdns_sd(service_name: &str) -> Result<BridgeInfo, HueError
 
     let mut dns_response_bytes_buffer = [0_u8; 4096];
     let deadline = Instant::now() + Duration::from_secs(3);
+
+    let mut discovered_bridges = Vec::new();
     // This loop breaks when timeout_at returns an error
     loop {
-        let (n_bytes, _origin_addr) =
-            timeout_at(deadline, socket.recv_from(&mut dns_response_bytes_buffer))
-                .await
-                .map_err(|_elapsed_error| {
-                    HueError::MdnsError(std::io::Error::new(
-                        std::io::ErrorKind::TimedOut,
-                        "mDNS response was not received on time",
-                    ))
-                })?
-                .map_err(HueError::MdnsError)?;
-
-        let dns_response_bytes = &dns_response_bytes_buffer[0..n_bytes];
-        if let Some(service_ip) = validate_response(dns_response_bytes, service_name, dns_query_id)
-        {
-            return Ok(service_ip);
+        match timeout_at(deadline, socket.recv_from(&mut dns_response_bytes_buffer)).await {
+            Ok(response) => {
+                let (n_bytes, _origin_addr) = response.map_err(HueError::MdnsError)?;
+                let dns_response_bytes = &dns_response_bytes_buffer[0..n_bytes];
+                if let Some(service_ip) =
+                    validate_response(dns_response_bytes, service_name, dns_query_id)
+                {
+                    discovered_bridges.push(service_ip);
+                }
+            }
+            Err(_timeout_error) => {
+                info!("mDNS response timed out, stopping discovery");
+                break;
+            }
         }
+    }
+
+    if discovered_bridges.is_empty() {
+        Err(HueError::MdnsError(std::io::Error::new(
+            std::io::ErrorKind::TimedOut,
+            "mDNS response was not received on time",
+        )))
+    } else {
+        Ok(discovered_bridges)
     }
 }
 

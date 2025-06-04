@@ -16,6 +16,8 @@ async fn main() {
     }
     let bridge = hueclient::Bridge::discover()
         .await
+        .into_iter()
+        .next()
         .unwrap()
         .with_user(args[1].to_string());
 
