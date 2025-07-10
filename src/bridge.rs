@@ -8,6 +8,7 @@ use reqwest::Method;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::net::SocketAddr;
 use std::time::Duration;
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
@@ -143,7 +144,7 @@ pub struct EventColorTemperature {
     pub mirek_valid: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum EventData {
     BridgeHome(BridgeHome),
@@ -162,7 +163,7 @@ pub enum EventData {
 #[derive(Debug, Clone)]
 pub struct UnauthBridge {
     /// The IP-address of the bridge.
-    pub ip: std::net::IpAddr,
+    pub addr: std::net::SocketAddr,
     /// The ID of the bridge.
     pub id: String,
     client: reqwest::Client,
@@ -178,9 +179,17 @@ impl UnauthBridge {
     pub fn with_user(self, username: impl Into<String>) -> Bridge {
         let username = username.into();
         Bridge {
-            ip: self.ip,
+            addr: self.addr,
             client: create_reqwest_client(Some(&username)),
             application_key: username,
+        }
+    }
+
+    pub fn with_addr(self, addr: SocketAddr) -> Self {
+        UnauthBridge {
+            addr,
+            id: self.id,
+            client: self.client,
         }
     }
 
@@ -208,7 +217,7 @@ impl UnauthBridge {
         let obtain = PostApi {
             devicetype: name.to_string(),
         };
-        let url = format!("https://{}/api", self.ip);
+        let url = format!("https://{}/api", self.addr);
         let resp: BridgeResponse<SuccessResponse<Username>> = self
             .client
             .post(&url)
@@ -223,7 +232,7 @@ impl UnauthBridge {
 
         let username = resp.success.username;
         Ok(Bridge {
-            ip: self.ip,
+            addr: self.addr,
             client: create_reqwest_client(Some(&username)),
             application_key: username,
         })
@@ -235,7 +244,7 @@ impl UnauthBridge {
 #[derive(Debug)]
 pub struct Bridge {
     /// The IP-address of the bridge.
-    pub ip: std::net::IpAddr,
+    pub addr: std::net::SocketAddr,
     /// This is the username of the currently logged in user.
     pub application_key: String,
     client: reqwest::Client,
@@ -290,7 +299,15 @@ impl Bridge {
     /// ```
     pub fn for_ip(ip: impl Into<std::net::IpAddr>) -> UnauthBridge {
         UnauthBridge {
-            ip: ip.into(),
+            addr: SocketAddr::new(ip.into(), 443),
+            id: String::default(),
+            client: create_reqwest_client(None),
+        }
+    }
+
+    pub fn for_addr(addr: impl Into<SocketAddr>) -> UnauthBridge {
+        UnauthBridge {
+            addr: addr.into(),
             id: String::default(),
             client: create_reqwest_client(None),
         }
@@ -309,7 +326,7 @@ impl Bridge {
             .unwrap_or_default()
             .into_iter()
             .map(|bridge_info| UnauthBridge {
-                ip: bridge_info.ip,
+                addr: SocketAddr::new(bridge_info.ip, 443),
                 id: bridge_info.id,
                 client: create_reqwest_client(None),
             })
@@ -329,7 +346,7 @@ impl Bridge {
             .unwrap_or_default()
             .into_iter()
             .map(|bridge_info| UnauthBridge {
-                ip: bridge_info.ip,
+                addr: SocketAddr::new(bridge_info.ip, 443),
                 id: bridge_info.id,
                 client: create_reqwest_client(None),
             })
@@ -344,7 +361,7 @@ impl Bridge {
     /// ```
     pub fn with_application_key(self, appplication_key: impl Into<String>) -> Bridge {
         Bridge {
-            ip: self.ip,
+            addr: self.addr,
             application_key: appplication_key.into(),
             client: self.client,
         }
@@ -376,7 +393,7 @@ impl Bridge {
         let obtain = PostApi {
             devicetype: name.to_string(),
         };
-        let url = format!("https://{}/api", self.ip);
+        let url = format!("https://{}/api", self.addr);
         let resp: BridgeResponse<SuccessResponse<Username>> = self
             .client
             .post(&url)
@@ -390,7 +407,7 @@ impl Bridge {
         let resp = resp.get()?;
 
         Ok(Bridge {
-            ip: self.ip,
+            addr: self.addr,
             application_key: resp.success.username,
             client: self.client,
         })
@@ -410,7 +427,7 @@ impl Bridge {
     /// # })
     /// ```
     pub async fn get_all_devices(&self) -> crate::Result<Vec<Device>> {
-        let url = format!("https://{}/clip/v2/resource/device", self.ip);
+        let url = format!("https://{}/clip/v2/resource/device", self.addr);
         let resp: BridgeResponseV2<Device> = self
             .client
             .get(&url)
@@ -447,7 +464,7 @@ impl Bridge {
     /// # })
     /// ```
     pub async fn get_all_lights(&self) -> crate::Result<Vec<Light>> {
-        let url = format!("https://{}/clip/v2/resource/light", self.ip);
+        let url = format!("https://{}/clip/v2/resource/light", self.addr);
         let resp: BridgeResponseV2<Light> = self
             .client
             .get(&url)
@@ -485,7 +502,7 @@ impl Bridge {
     /// # })
     /// ```
     pub async fn get_all_rooms(&self) -> crate::Result<Vec<Room>> {
-        let url = format!("https://{}/clip/v2/resource/room", self.ip);
+        let url = format!("https://{}/clip/v2/resource/room", self.addr);
         let resp: BridgeResponseV2<Room> = self
             .client
             .get(&url)
@@ -550,7 +567,7 @@ impl Bridge {
     /// # })
     /// ```
     pub async fn get_all_zones(&self) -> crate::Result<Vec<Zone>> {
-        let url = format!("https://{}/clip/v2/resource/zone", self.ip);
+        let url = format!("https://{}/clip/v2/resource/zone", self.addr);
         let resp: BridgeResponseV2<Zone> = self
             .client
             .get(&url)
@@ -603,7 +620,7 @@ impl Bridge {
     /// # })
     /// ```
     pub async fn get_all_scenes(&self) -> crate::Result<Vec<Scene>> {
-        let url = format!("https://{}/clip/v2/resource/scene", self.ip);
+        let url = format!("https://{}/clip/v2/resource/scene", self.addr);
         let resp: BridgeResponseV2<Scene> = self
             .client
             .get(&url)
@@ -619,7 +636,7 @@ impl Bridge {
     }
 
     pub async fn set_scene(&self, scene: String) -> crate::Result<()> {
-        let url = format!("https://{}/clip/v2/resource/scene/{}", self.ip, scene);
+        let url = format!("https://{}/clip/v2/resource/scene/{}", self.addr, scene);
         let resp: BridgeResponseV2<Value> = self
             .client
             .put(&url)
@@ -652,7 +669,7 @@ impl Bridge {
     /// # })
     /// ```
     pub async fn get_all_smart_scenes(&self) -> crate::Result<Vec<SmartScene>> {
-        let url = format!("https://{}/clip/v2/resource/smart_scene", self.ip);
+        let url = format!("https://{}/clip/v2/resource/smart_scene", self.addr);
         let resp: BridgeResponseV2<SmartScene> = self
             .client
             .get(&url)
@@ -668,7 +685,10 @@ impl Bridge {
     }
 
     pub async fn set_smart_scene(&self, scene: String) -> crate::Result<()> {
-        let url = format!("https://{}/clip/v2/resource/smart_scene/{}", self.ip, scene);
+        let url = format!(
+            "https://{}/clip/v2/resource/smart_scene/{}",
+            self.addr, scene
+        );
         let resp: BridgeResponseV2<Value> = self
             .client
             .put(&url)
@@ -691,7 +711,7 @@ impl Bridge {
     pub async fn set_group_state(&self, group: &str, command: &CommandLight) -> crate::Result<()> {
         let url = format!(
             "https://{}/clip/v2/resource/grouped_light/{}",
-            self.ip, group
+            self.addr, group
         );
         let resp: BridgeResponseV2<Value> = self
             .client
@@ -708,7 +728,7 @@ impl Bridge {
     }
 
     pub async fn set_light_state(&self, light: &str, command: &CommandLight) -> crate::Result<()> {
-        let url = format!("https://{}/clip/v2/resource/light/{}", self.ip, light);
+        let url = format!("https://{}/clip/v2/resource/light/{}", self.addr, light);
         let resp: BridgeResponseV2<Value> = self
             .client
             .put(&url)
@@ -726,7 +746,7 @@ impl Bridge {
     pub fn events(&self) -> crate::Result<impl Stream<Item = HueEvent>> {
         let request_builder = self.client.request(
             Method::GET,
-            format!("https://{}/eventstream/clip/v2", self.ip),
+            format!("https://{}/eventstream/clip/v2", self.addr),
         );
         let mut event_source = reqwest_eventsource::EventSource::new(request_builder)?;
         event_source.set_retry_policy(Box::new(reqwest_eventsource::retry::Never)); // Do not retry to connect, if the TCP connection failed, there might be something going on
@@ -753,7 +773,7 @@ pub struct Event {
     pub r#type: EventType,
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize, Eq, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum EventType {
     Update,

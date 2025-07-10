@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct ResourceIdentifier {
     pub rid: String,
     pub rtype: String,
@@ -8,7 +8,7 @@ pub struct ResourceIdentifier {
 
 type Owner = ResourceIdentifier;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct LightMetadata {
     pub name: Option<String>,
     pub archetype: Option<String>,
@@ -16,50 +16,50 @@ pub struct LightMetadata {
     pub function: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct On {
     pub on: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Dimming {
     pub brightness: f32,
     pub min_dim_level: Option<f32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct ColorTemperature {
     pub mirek: Option<u16>,
     pub mirek_valid: Option<bool>,
     pub mirek_schema: Option<MirekSchema>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct MirekSchema {
     pub mirek_minimum: u16,
     pub mirek_maximum: u16,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Color {
     pub xy: Option<XY>,
     pub gamut: Option<Gamut>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct XY {
     pub x: f32,
     pub y: f32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Gamut {
     pub red: XY,
     pub green: XY,
     pub blue: XY,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Light {
     pub id: String,
     pub id_v1: Option<String>,
@@ -73,14 +73,14 @@ pub struct Light {
     pub color: Option<Color>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct SceneMetadata {
     pub name: Option<String>,
 }
 
 pub type Group = ResourceIdentifier;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct SceneStatus {
     pub active: Option<SceneStatusActive>,
     pub last_recall: Option<String>,
@@ -94,7 +94,7 @@ pub enum SceneStatusActive {
     DynamicPalette,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Scene {
     pub id: String,
     pub id_v1: Option<String>,
@@ -110,7 +110,7 @@ pub enum SmartSceneActive {
     Inactive,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct SmartScene {
     pub id: String,
     pub id_v1: Option<String>,
@@ -119,13 +119,13 @@ pub struct SmartScene {
     pub state: Option<SmartSceneActive>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Metadata {
     pub name: Option<String>,
     pub archetype: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Room {
     pub id: String,
     pub id_v1: Option<String>,
@@ -134,7 +134,7 @@ pub struct Room {
     pub metadata: Option<Metadata>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Zone {
     pub id: String,
     pub id_v1: Option<String>,
@@ -143,7 +143,7 @@ pub struct Zone {
     pub metadata: Option<Metadata>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct BridgeHome {
     pub id: String,
     pub id_v1: Option<String>,
@@ -151,7 +151,7 @@ pub struct BridgeHome {
     pub services: Option<Vec<ResourceIdentifier>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GroupedLight {
     pub id: String,
     pub id_v1: Option<String>,
@@ -162,7 +162,7 @@ pub struct GroupedLight {
     pub color: Option<Color>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct ProductData {
     pub model_id: Option<String>,
     pub manufacturer_name: Option<String>,
@@ -170,13 +170,13 @@ pub struct ProductData {
     pub product_archetype: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct DeviceMetadata {
     pub name: Option<String>,
     pub archetype: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Device {
     pub id: String,
     pub id_v1: Option<String>,
@@ -185,7 +185,7 @@ pub struct Device {
     pub services: Option<Vec<ResourceIdentifier>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Bridge {
     pub id: String,
     pub id_v1: Option<String>,
