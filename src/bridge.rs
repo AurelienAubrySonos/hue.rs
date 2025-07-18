@@ -353,6 +353,18 @@ impl Bridge {
             .collect()
     }
 
+    pub async fn discover_cloud() -> crate::Result<Vec<UnauthBridge>> {
+        Ok(crate::disco::discover_hue_bridge_n_upnp()
+            .await?
+            .into_iter()
+            .map(|bridge_info| UnauthBridge {
+                addr: SocketAddr::new(bridge_info.ip, 443),
+                id: bridge_info.id,
+                client: create_reqwest_client(None),
+            })
+            .collect())
+    }
+
     /// Consumes the bidge and return a new one with a configured username.
     /// ### Example
     /// ```no_run
