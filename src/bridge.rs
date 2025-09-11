@@ -56,29 +56,29 @@ pub struct CommandScene {
     recall: SceneRecall,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CommandLightDimming {
     pub brightness: f32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CommandLightColorTemperature {
     pub mirek: u16,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CommandLightColor {
     pub xy: XY,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub struct CommandLightDynamics {
     #[serde(skip_serializing_if = "Option::is_none")]
     duration: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     speed: Option<f32>,
 }
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub struct CommandLight {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub on: Option<On>,
@@ -753,6 +753,22 @@ impl Bridge {
             .await?;
         resp.get()?;
         Ok(())
+    }
+
+    pub async fn get_all_bridge_homes(&self) -> crate::Result<Vec<BridgeHome>> {
+        let url = format!("https://{}/clip/v2/resource/bridge_home", self.addr);
+        let resp: BridgeResponseV2<BridgeHome> = self
+            .client
+            .get(&url)
+            .timeout(REQUEST_TIMEOUT)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        let mut homes = resp.get()?;
+        homes.sort_by(|a, b| a.id.cmp(&b.id));
+        Ok(homes)
     }
 
     pub fn events(&self) -> crate::Result<impl Stream<Item = HueEvent>> {
